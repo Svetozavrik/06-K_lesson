@@ -11,42 +11,42 @@ def test_form_validation():
     wait = WebDriverWait(driver, 20)
     wait.until(EC.presence_of_element_located((By.NAME, "first-name")))
 
-   
-    fields_to_fill = {
-        "first-name": "Иван",
-        "last-name": "Петров",
-        "address": "Ленина, 55-3",
-        "email": "test@skypro.com",
-        "phone-number": "+7985899998787",
-        "city": "Москва",
-        "country": "Россия",
-        "job-position": "QA",
-        "company": "SkyPro"
-    }
 
-    for name, value in fields_to_fill.items():
-        field = driver.find_element(By.NAME, name)
-        field.clear()
-        field.send_keys(value)
-
-
+    driver.find_element(By.NAME, "first-name").send_keys("Иван")
+    driver.find_element(By.NAME, "last-name").send_keys("Петров")
+    driver.find_element(By.NAME, "address").send_keys("Ленина, 55-3")
+    driver.find_element(By.NAME, "e-mail").send_keys("test@skypro.com")
+    driver.find_element(By.NAME, "phone").send_keys("+7985899998787")
+    
+  
     zip_code_field = driver.find_element(By.NAME, "zip-code")
     zip_code_field.clear()
+    
+    driver.find_element(By.NAME, "city").send_keys("Москва")
+    driver.find_element(By.NAME, "country").send_keys("Россия")
+    driver.find_element(By.NAME, "job-position").send_keys("QA")
+    driver.find_element(By.NAME, "company").send_keys("SkyPro")
+
 
     submit_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
     submit_button.click()
 
-   
-    fields = driver.find_elements(By.CSS_SELECTOR, "fieldset input")
+    
+    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "fieldset input")))
 
+
+    fields = driver.find_elements(By.CSS_SELECTOR, "fieldset input")
+      
     for field in fields:
         name = field.get_attribute("name")
-        border_color = field.value_of_css_property("border-color")
+        border_color = field.value_of_css_property("border-color").lower()
 
        
         if name == "zip-code":
-            assert "red" in border_color.lower(), f"Поле {name} должно быть красным, но цвет: {border_color}"
+            assert "red" in border_color or "rgb(220, 53, 69)" in border_color or "#dc3545" in border_color, \
+                f"Поле {name} должно быть красным, а не {border_color}"
         else:
-            assert "green" in border_color.lower(), f"Поле {name} должно быть зелёным, но цвет: {border_color}"
+            assert "green" in border_color or "rgb(25, 135, 84)" in border_color or "#198754" in border_color, \
+                f"Поле {name} должно быть зеленым, а не {border_color}"
 
     driver.quit()
