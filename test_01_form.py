@@ -1,52 +1,50 @@
+import pytest
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-def test_form_validation():
-    driver = webdriver.Edge()
-    driver.get("https://bonigarcia.dev/selenium-webdriver-java/data-types.html")
+def test_form():
+    driver = webdriver.Chrome()
     driver.maximize_window()
+    driver.get("https://bonigarcia.dev/selenium-webdriver-java/data-types.html")
 
-    wait = WebDriverWait(driver, 20)
-    wait.until(EC.presence_of_element_located((By.NAME, "first-name")))
+    wait = WebDriverWait(driver, 10)
 
+    data = {
+        "first-name": "Иван",
+        "last-name": "Петров",
+        "address": "Ленина, 55-3",
+        "e-mail": "test@skypro.com",
+        "phone": "+7985899998787",
+        "city": "Москва",
+        "country": "Россия",
+        "job-position": "QA",
+        "company": "SkyPro"
+    }
 
-    driver.find_element(By.NAME, "first-name").send_keys("Иван")
-    driver.find_element(By.NAME, "last-name").send_keys("Петров")
-    driver.find_element(By.NAME, "address").send_keys("Ленина, 55-3")
-    driver.find_element(By.NAME, "e-mail").send_keys("test@skypro.com")
-    driver.find_element(By.NAME, "phone").send_keys("+7985899998787")
-    
-  
-    zip_code_field = driver.find_element(By.NAME, "zip-code")
-    zip_code_field.clear()
-    
-    driver.find_element(By.NAME, "city").send_keys("Москва")
-    driver.find_element(By.NAME, "country").send_keys("Россия")
-    driver.find_element(By.NAME, "job-position").send_keys("QA")
-    driver.find_element(By.NAME, "company").send_keys("SkyPro")
+    for name, value in data.items():
+        wait.until(EC.presence_of_element_located((By.NAME, name))).send_keys(value)
 
+    zip_field = wait.until(EC.presence_of_element_located((By.NAME, "zip-code")))
+    zip_field.clear()
 
     submit_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-    submit_button.click()
+    driver.execute_script("arguments[0].scrollIntoView(true);", submit_button)
+    driver.execute_script("arguments[0].click();", submit_button)
+
+
+    driver.back()
+    wait.until(EC.presence_of_element_located((By.NAME, "zip-code")))
 
     
-    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "fieldset input")))
+    zip_color = driver.find_element(By.NAME, "zip-code").value_of_css_property("border-color").lower()
+    assert "#dc3545" in zip_color or "rgb(220, 53, 69)" in zip_color, \
+        f"Zip code должен быть красным, а он {zip_color}"
 
-
-    fields = driver.find_elements(By.CSS_SELECTOR, "fieldset input")
-      
-    for field in fields:
-        name = field.get_attribute("name")
-        border_color = field.value_of_css_property("border-color").lower()
-
-       
-        if name == "zip-code":
-            assert "red" in border_color or "rgb(220, 53, 69)" in border_color or "#dc3545" in border_color, \
-                f"Поле {name} должно быть красным, а не {border_color}"
-        else:
-            assert "green" in border_color or "rgb(25, 135, 84)" in border_color or "#198754" in border_color, \
-                f"Поле {name} должно быть зеленым, а не {border_color}"
+    for name in data.keys():
+        color = driver.find_element(By.NAME, name).value_of_css_property("border-color").lower()
+        assert "#198754" in color or "rgb(25, 135, 84)" in color, \
+            f"Поле {name} должно быть зеленым, а оно {color}"
 
     driver.quit()
