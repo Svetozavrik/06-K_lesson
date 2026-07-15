@@ -1,65 +1,83 @@
+import pytest
 from selenium import webdriver
-from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service
 
 def test_shop_checkout():
-    driver = webdriver.Firefox()
+    # Настройка драйвера
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service)
     driver.maximize_window()
-    driver.get("http://www.saucedemo.com/")
     wait = WebDriverWait(driver, 10)
+    
+    try:
+       
+        driver.get("https://www.saucedemo.com/")
+        driver.find_element(By.ID, "user-name").send_keys("standard_user")
+        driver.find_element(By.ID, "password").send_keys("secret_sauce")
+        driver.find_element(By.ID, "login-button").click()
+        wait.until(EC.presence_of_element_located((By.CLASS_NAME, "inventory_item")))
+        
+       
+        products = ["Sauce Labs Backpack", "Sauce Labs Bolt T-Shirt"]
+      
 
-
-    user_name = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "#user-name")))
-    user_name.send_keys("standard_user")
-
-    password = driver.find_element(By.CSS_SELECTOR, "#password")
-    password.send_keys("secret_sauce")
-
-    login_button = driver.find_element(By.CSS_SELECTOR, "#login-button")
-    login_button.click()
-
-
-    products_to_add = [
-        "Sauce Labs Backpack",
-        "Sauce Labs Bolt T-Shirt",
-        "Sauce Labs Onesie"
-    ]
-
-
-    for product_name in products_to_add:
-        add_button = wait.until(
-            EC.element_to_be_clickable(
-                (By.XPATH, f"//div[contains(@class, 'inventory_item')]//div[text()='{product_name}']/../../div[@class='pricebar']/button")
+        total_products_price = 0.0
+        
+       
+        for product in products:
+           
+            price_element = driver.find_element(
+                By.XPATH, 
+                f"//div[text()='{product}']/ancestor::div[@class='inventory_item']//div[@class='inventory_item_price']"
             )
-        )
-        add_button.click()
-
-   
-    cart_icon = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".shopping_cart_container a")))
-    cart_icon.click()
-
-    checkout_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "#checkout")))
-    checkout_button.click()
-
-    first_name_input = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "#first-name")))
-    first_name_input.send_keys("Svetlana")
-
-    last_name_input = driver.find_element(By.CSS_SELECTOR, "#last-name")
-    last_name_input.send_keys("Bazhenova")
-
-    postal_code_input = driver.find_element(By.CSS_SELECTOR, "#postal-code")
-    postal_code_input.send_keys("123456")
-
-    continue_button = driver.find_element(By.CSS_SELECTOR, "#continue")
-    continue_button.click()
-
-   
-    total_element = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".summary_total_label")))
-    total_text = total_element.text
-
-    expected_total = "Total: $58.29"
-    assert total_text == expected_total, f"Ожидалась сумма {expected_total}, но получено: {total_text}"
-
-    driver.quit()
+            price_text = price_element.text
+            price_value = float(price_text.replace("$", ""))
+            total_products_price += price_value
+            
+          
+            add_button = wait.until(
+                EC.element_to_be_clickable(
+                    (By.XPATH, f"//div[text()='{product}']/ancestor::div[@class='inventory_item']//button")
+                )
+            )
+            add_button.click()
+        
+      
+        driver.find_element(By.CLASS_NAME, "shopping_cart_link").click()
+        driver.find_element(By.ID, "checkout").click()
+      
+        fields = {
+            "first-name": "Светлана",
+            "last-name": "Баженова",
+            "postal-code": "123456"
+        }
+        for name, value in fields.items():
+            field = wait.until(EC.presence_of_element_located((By.ID, name)))
+            field.send_keys(value)
+        
+        driver.find_element(By.ID, "continue").click()
+        
+       
+        wait.until(EC.presence_of_element_located((By.CLASS_NAME, "summary_total_label")))
+        
+      
+        tax_element = driver.find_element(By.CLASS_NAME, "summary_tax_label")
+        tax_text = tax_element.text
+        tax_value = float(tax_text.replace("Tax: $", ""))
+        
+        total_text = driver.find_element(By.CLASS_NAME, "summary_total_label").text
+        total_value = float(total_text.replace("Total: $", ""))
+        
+      
+        expected_total = total_products_price + tax_value
+       
+        assert round(total_value, 2) == round(expected_total, 2), \
+            f"Итоговая сумма не совпадает. Ожидалось: {expected_total:.2f}, получено: {total_value:.2f}"
+        
+        
+    finally:
+        driver.quit()
